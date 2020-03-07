@@ -20,6 +20,7 @@ def clear():
     else: 
         _ = system('clear') 
 
+#The generated obstacle doesn't actually intersect with any of the previously created obstacles
 def is_valid_obstacle(grid, x, y, length, width):
 	for i in range(0, length):
 		for j in range(0, width):
@@ -27,28 +28,42 @@ def is_valid_obstacle(grid, x, y, length, width):
 				return False
 	return True
 
-def fill_grid_with_obstacle(grid, x, y, length, width):
+def fill_grid_with_obstacle(grid, x, y, length, width, obstacle_number):
 	for i in range(0, length):
 		for j in range(0, width):
 			grid[i + x][j + y].cell_entry = CellEntry.OBSTACLE;
+			grid[i + x][j + y].obstacle_number = obstacle_number
 
-def generate_obstacle(grid, rows, cols):
+#Needs some more intelligence in creating the obstacles
+def generate_obstacle(grid, rows, cols, obstacle_number):
 
 	#Toss a coin to decide if the obstacle needs to be vertical or horizontal (0 for vertical/1 for horizonal)
 	orientation = random.choice([0, 1])
 
-	cell_x = random.randrange(0, rows - 1, 1)
-	cell_y = random.randrange(0, cols - 1, 1)
+	cell_x = random.randint(0, rows - 2)
+	cell_y = random.randint(0, cols - 2)
 
 	print("cell_x: " + str(cell_x))
 	print("cell_y: " + str(cell_y))
 	
+
+	#This is used to ensure that the obstacles don't cover the entire row or column
+	random_subtractor = random.randint(2,5)
+	
 	if orientation == 0:
-		obstacle_length = random.randrange(2, rows - cell_x, 1)
+		obstacle_length = random.randint(2, rows - cell_x)
 		obstacle_width = random.choice([DEFAULT_ORIENTATION_MIN_VALUE, DEFAULT_ORIENTATION_MAX_VALUE])
 	else:
 		obstacle_length = random.choice([DEFAULT_ORIENTATION_MIN_VALUE, DEFAULT_ORIENTATION_MAX_VALUE])
-		obstacle_width = random.randrange(2, cols - cell_y, 1)
+		obstacle_width = random.randint(2, cols - cell_y)
+
+
+	#Not a great logic 
+	if obstacle_length > cols/2:
+		obstacle_length -= random_subtractor
+
+	if obstacle_width > rows/2:
+		obstacle_width -= random_subtractor
 
 	print("Obstacle length: " + str(obstacle_length))
 	print("Obstacle width: " + str(obstacle_width))
@@ -58,12 +73,12 @@ def generate_obstacle(grid, rows, cols):
 
 	while not is_valid:
 		print("Not valid")
-		cell_x = random.randrange(0, rows - 1, 1)
-		cell_y = random.randrange(0, cols - 1, 1)
+		cell_x = random.randint(0, rows - 1)
+		cell_y = random.randint(0, cols - 1)
 
 		is_valid = is_valid_obstacle(grid, cell_x, cell_y, obstacle_length, obstacle_width)
 
-	fill_grid_with_obstacle(grid, cell_x, cell_y, obstacle_length, obstacle_width)
+	fill_grid_with_obstacle(grid, cell_x, cell_y, obstacle_length, obstacle_width, obstacle_number)
 
 	return obstacle_length, obstacle_width, cell_x, cell_y, grid
 
@@ -71,28 +86,78 @@ def generate_obstacle(grid, rows, cols):
 def render_flying_area(grid, rows, cols):
 	clear()
 
-	full_str = ''
+	full_str = 'Current position indicated by *\n'
 	for i in range(rows):
+		full_str += "   "
+		
 		for k in range(cols * 4):
 			full_str += '-'
 		full_str += '\n'
 		
-		col_str = '| '
+		if i == rows - 1:
+			col_str = "==>| "
+		else:
+			col_str = '   | '
+		
 		for j in range(cols):
-			cell_value = grid[i][j].cell_entry.value
-			if grid[i][j].cell_entry.value == 1:
-				col_str += "X | "
+			cell_entry = grid[i][j].cell_entry
+			if cell_entry == CellEntry.OBSTACLE:
+				col_str += "O" + str(grid[i][j].obstacle_number + 1) + "| "
+			elif cell_entry == CellEntry.CURRENT:
+				col_str += "* | "
+			elif cell_entry == CellEntry.UP:
+				col_str += "U | "
+			elif cell_entry == CellEntry.RIGHT:
+				col_str += "R | "
+			elif cell_entry == CellEntry.LEFT:
+				col_str += "L | "
+			elif cell_entry == CellEntry.DOWN:
+				col_str += "D | "
 			else:
 				col_str += "  | "
 
+		if i == 0:
+			col_str += " <== Goal "
 		col_str += '\n'
 		full_str += col_str
 
 
+	full_str += "   "
 	for k in range(cols * 4):
 		full_str += '-'
 	print(full_str)
 
+
+def start_flying(grid, rows, cols):
+	current_pos = Coordinate(rows - 1, 0)
+
+	while current_pos.x != 0 and current_pos.y != cols:
+		move = input("Press w to move UP, a for LEFT, s for DOWN, d for RIGHT: ")
+
+		if move == 'w' or move == 'W':
+			if current_pos.x - 1 >= 0:
+				grid[current_pos.x][current_pos.y].cell_entry = CellEntry.UP
+				grid[current_pos.x - 1][current_pos.y].cell_entry = CellEntry.CURRENT
+				current_pos.x = current_pos.x - 1
+		elif move == 'a' or move == 'A':
+			if current_pos.y - 1 >= 0:
+				grid[current_pos.x][current_pos.y].cell_entry = CellEntry.LEFT
+				grid[current_pos.x][current_pos.y - 1].cell_entry = CellEntry.CURRENT
+				current_pos.y= current_pos.y - 1
+		elif move == 's' or move == 'S':
+			if current_pos.x + 1 < rows:
+				grid[current_pos.x][current_pos.y].cell_entry = CellEntry.DOWN
+				grid[current_pos.x + 1][current_pos.y].cell_entry = CellEntry.CURRENT
+				current_pos.x= current_pos.x + 1
+		elif move == 'd' or move == 'D':
+			if current_pos.y + 1 < cols:
+				grid[current_pos.x][current_pos.y].cell_entry = CellEntry.RIGHT
+				grid[current_pos.x][current_pos.y + 1].cell_entry = CellEntry.CURRENT
+				current_pos.y= current_pos.y + 1
+		else:
+			print("Press a correct option")
+
+		render_flying_area(grid, rows, cols)
 	
 if __name__ == '__main__':
 
@@ -100,8 +165,11 @@ if __name__ == '__main__':
 	rows = int(input("Enter the number of rows: "))
 	cols = int(input("Enter the number of columns: "))
 
-	#Create a two dimensional grid of FlyingAreas
+	#Create a two dimensional grid of cells
 	grid = [ [Cell("EMPTY") for j in range(cols)] for i in range(rows) ]
+
+
+	grid[rows-1][0].cell_entry = CellEntry.CURRENT
 
 	num_obstacles = int(input("Enter the number of obstacles(0 - " + str(MAX_OBSTACLES) + "): "))
 
@@ -132,10 +200,12 @@ if __name__ == '__main__':
 			intent_input = int(input("Enter the intent for obstacle " + str(i + 1) + ": "))
 
 
-		length, width, x, y, grid = generate_obstacle(grid, rows, cols)
+		length, width, x, y, grid = generate_obstacle(grid, rows, cols, i)
 	
 		obstacles.append(Obstacle(x, y, length, width, intent_input))
 
 
 	render_flying_area(grid, rows, cols)
+
+	start_flying(grid, rows, cols)
 		
