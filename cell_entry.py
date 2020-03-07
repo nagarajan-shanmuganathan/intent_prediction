@@ -11,3 +11,7 @@ class CellEntry(enum.Enum):
 	UP = 7
 	CURRENT = 8
 	VISITED_OBSTACLE = 9
+	RIGHT_UP = 10
+	LEFT_UP = 11
+	RIGHT_DOWN = 12
+	LEFT_DOWN = 13

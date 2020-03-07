@@ -33,6 +33,7 @@ def fill_grid_with_obstacle(grid, x, y, length, width, obstacle_number):
 		for j in range(0, width):
 			grid[i + x][j + y].cell_entry = CellEntry.OBSTACLE;
 			grid[i + x][j + y].obstacle_number = obstacle_number
+			grid[i + x][j + y].is_obstacle = True
 
 #Needs some more intelligence in creating the obstacles
 def generate_obstacle(grid, rows, cols, obstacle_number):
@@ -86,7 +87,7 @@ def generate_obstacle(grid, rows, cols, obstacle_number):
 def render_flying_area(grid, rows, cols):
 	clear()
 
-	full_str = 'Current position indicated by *\n'
+	full_str = 'Current position is indicated by *\n'
 	for i in range(rows):
 		full_str += "   "
 		
@@ -113,6 +114,16 @@ def render_flying_area(grid, rows, cols):
 				col_str += "L | "
 			elif cell_entry == CellEntry.DOWN:
 				col_str += "D | "
+			elif cell_entry == CellEntry.VISITED_OBSTACLE:
+				col_str += "VO| "
+			elif cell_entry == CellEntry.LEFT_UP:
+				col_str += "LU| "
+			elif cell_entry == CellEntry.RIGHT_UP:
+				col_str += "RU| "
+			elif cell_entry == CellEntry.LEFT_DOWN:
+				col_str += "LD| "
+			elif cell_entry == CellEntry.RIGHT_DOWN:
+				col_str += "RD| "
 			else:
 				col_str += "  | "
 
@@ -128,36 +139,107 @@ def render_flying_area(grid, rows, cols):
 	print(full_str)
 
 
-def start_flying(grid, rows, cols):
+def fly(grid, rows, cols):
+
+	moves = []
+
 	current_pos = Coordinate(rows - 1, 0)
 
-	while current_pos.x != 0 and current_pos.y != cols:
-		move = input("Press w to move UP, a for LEFT, s for DOWN, d for RIGHT: ")
+	while current_pos.x != 0 or current_pos.y != cols - 1:
+		move = input("Press w -> UP, a -> LEFT, s -> DOWN, d -> RIGHT, i -> LEFT_UP, o -> RIGHT_UP, j -> LEFT_DOWN, k -> RIGHT_DOWN: ")
 
 		if move == 'w' or move == 'W':
 			if current_pos.x - 1 >= 0:
-				grid[current_pos.x][current_pos.y].cell_entry = CellEntry.UP
+				if grid[current_pos.x][current_pos.y].is_obstacle:
+					grid[current_pos.x][current_pos.y].cell_entry = CellEntry.VISITED_OBSTACLE
+				else:
+					grid[current_pos.x][current_pos.y].cell_entry = CellEntry.UP
+
+				moves.append(Coordinate(current_pos.x, current_pos.y))
 				grid[current_pos.x - 1][current_pos.y].cell_entry = CellEntry.CURRENT
 				current_pos.x = current_pos.x - 1
 		elif move == 'a' or move == 'A':
 			if current_pos.y - 1 >= 0:
-				grid[current_pos.x][current_pos.y].cell_entry = CellEntry.LEFT
+				if grid[current_pos.x][current_pos.y].is_obstacle:
+					grid[current_pos.x][current_pos.y].cell_entry = CellEntry.VISITED_OBSTACLE
+				else:
+					grid[current_pos.x][current_pos.y].cell_entry = CellEntry.LEFT
+				
+				moves.append(Coordinate(current_pos.x, current_pos.y))
 				grid[current_pos.x][current_pos.y - 1].cell_entry = CellEntry.CURRENT
 				current_pos.y= current_pos.y - 1
 		elif move == 's' or move == 'S':
 			if current_pos.x + 1 < rows:
-				grid[current_pos.x][current_pos.y].cell_entry = CellEntry.DOWN
+				if grid[current_pos.x][current_pos.y].is_obstacle:
+					grid[current_pos.x][current_pos.y].cell_entry = CellEntry.VISITED_OBSTACLE
+				else:
+					grid[current_pos.x][current_pos.y].cell_entry = CellEntry.DOWN
+				
+				moves.append(Coordinate(current_pos.x, current_pos.y))
 				grid[current_pos.x + 1][current_pos.y].cell_entry = CellEntry.CURRENT
 				current_pos.x= current_pos.x + 1
 		elif move == 'd' or move == 'D':
 			if current_pos.y + 1 < cols:
-				grid[current_pos.x][current_pos.y].cell_entry = CellEntry.RIGHT
+				if grid[current_pos.x][current_pos.y].is_obstacle:
+					grid[current_pos.x][current_pos.y].cell_entry = CellEntry.VISITED_OBSTACLE
+				else:
+					grid[current_pos.x][current_pos.y].cell_entry = CellEntry.RIGHT
+				
+				moves.append(Coordinate(current_pos.x, current_pos.y))
 				grid[current_pos.x][current_pos.y + 1].cell_entry = CellEntry.CURRENT
 				current_pos.y= current_pos.y + 1
+		elif move == 'i' or move == 'I':
+			if current_pos.x - 1 >= 0 and current_pos.y - 1 >= 0:
+				if grid[current_pos.x][current_pos.y].is_obstacle:
+					grid[current_pos.x][current_pos.y].cell_entry = CellEntry.VISITED_OBSTACLE
+				else:
+					grid[current_pos.x][current_pos.y].cell_entry = CellEntry.LEFT_UP
+
+				moves.append(Coordinate(current_pos.x, current_pos.y))
+				grid[current_pos.x - 1][current_pos.y - 1].cell_entry = CellEntry.CURRENT
+				current_pos.x = current_pos.x - 1
+				current_pos.y = current_pos.y - 1
+		elif move == 'o' or move == 'O':
+			if current_pos.x - 1 >= 0 and current_pos.y + 1 < cols:
+				if grid[current_pos.x][current_pos.y].is_obstacle:
+					grid[current_pos.x][current_pos.y].cell_entry = CellEntry.VISITED_OBSTACLE
+				else:
+					grid[current_pos.x][current_pos.y].cell_entry = CellEntry.RIGHT_UP
+
+				moves.append(Coordinate(current_pos.x, current_pos.y))
+				grid[current_pos.x - 1][current_pos.y + 1].cell_entry = CellEntry.CURRENT
+				current_pos.x = current_pos.x - 1
+				current_pos.y = current_pos.y + 1
+		elif move == 'j' or move == 'J':
+			if current_pos.x + 1 < rows and current_pos.y - 1 >= 0:
+				if grid[current_pos.x][current_pos.y].is_obstacle:
+					grid[current_pos.x][current_pos.y].cell_entry = CellEntry.VISITED_OBSTACLE
+				else:
+					grid[current_pos.x][current_pos.y].cell_entry = CellEntry.LEFT_DOWN
+
+				moves.append(Coordinate(current_pos.x, current_pos.y))
+				grid[current_pos.x + 1][current_pos.y - 1].cell_entry = CellEntry.CURRENT
+				current_pos.x = current_pos.x + 1
+				current_pos.y = current_pos.y - 1
+		elif move == 'k' or move == 'k':
+			if current_pos.x + 1 < rows and current_pos.y + 1 < cols:
+				if grid[current_pos.x][current_pos.y].is_obstacle:
+					grid[current_pos.x][current_pos.y].cell_entry = CellEntry.VISITED_OBSTACLE
+				else:
+					grid[current_pos.x][current_pos.y].cell_entry = CellEntry.RIGHT_DOWN
+
+				moves.append(Coordinate(current_pos.x, current_pos.y))
+				grid[current_pos.x + 1][current_pos.y + 1].cell_entry = CellEntry.CURRENT
+				current_pos.x = current_pos.x + 1
+				current_pos.y = current_pos.y + 1
+
 		else:
 			print("Press a correct option")
 
 		render_flying_area(grid, rows, cols)
+	moves.append(Coordinate(current_pos.x, current_pos.y))
+
+	return moves
 	
 if __name__ == '__main__':
 
@@ -207,5 +289,12 @@ if __name__ == '__main__':
 
 	render_flying_area(grid, rows, cols)
 
-	start_flying(grid, rows, cols)
+	moves = fly(grid, rows, cols)
+	
+
+	print("Moves: ")
+	for move in moves:
+		print(str(move.x) + " " + str(move.y))
+
+
 		
