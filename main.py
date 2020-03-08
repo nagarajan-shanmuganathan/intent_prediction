@@ -180,7 +180,7 @@ def check_intent_reach_violation(grid, rows, cols, moves, obstacles):
 			obstacle_number = grid[move.x][move.y].obstacle_number
 
 			if obstacle_number + 1 in should_reach_obstacles:
-				should_reach_obstacles = should_reach_obstacles - set([obstacle_number])
+				should_reach_obstacles = should_reach_obstacles - set([obstacle_number + 1])
 
 	should_reach_obstacles = list(should_reach_obstacles)
 
