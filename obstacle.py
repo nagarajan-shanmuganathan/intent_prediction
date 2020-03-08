@@ -1,8 +1,11 @@
 from intent import Intent
 
 class Obstacle:
+
+	intent_violation = False
 	
-	def __init__(self, x, y, length, width, intent):
+	def __init__(self, obstacle_number, x, y, length, width, intent):
+		self.number = obstacle_number
 		self.x = x
 		self.y = y
 		self.length = length

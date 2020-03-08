@@ -21,14 +21,24 @@ def clear():
     else: 
         _ = system('clear') 
 
-#The generated obstacle doesn't actually intersect with any of the previously created obstacles
+# The generated obstacle 
+# 1) Doesn't intersect with any of the previously created obstacles
+# 2) Doesn't block the start and goal cells
 def is_valid_obstacle(grid, x, y, length, width, rows, cols):
 	for i in range(0, length):
 		if i + x >= rows:
 			return False
 		for j in range(0, width):
+
 			if j + y >= cols:
 				return False
+
+			if i + x == 0 and j + y == cols - 1:
+				return False
+
+			if i + x == rows - 1 and j + y == 0:
+				return False
+
 			if grid[i + x][j + y].cell_entry != CellEntry.EMPTY:
 				return False
 	return True
@@ -142,6 +152,48 @@ def render_flying_area(grid, rows, cols):
 	print(full_str)
 
 
+def check_intent_avoidance_violation(grid, rows, cols, moves, obstacles):
+
+	violated_intents = []
+	for move in moves:
+		if grid[move.x][move.y].is_obstacle:
+			obstacle_number = grid[move.x][move.y].obstacle_number
+
+			obstacle = obstacles[obstacle_number]
+
+			if obstacle.intent == Intent.AVOID:
+				if obstacle_number + 1 not in violated_intents:
+					violated_intents.append(obstacle_number + 1)
+
+
+	for i in range(len(violated_intents)):
+		obstacles[violated_intents[i] - 1].intent_violation = True
+	
+	return violated_intents
+
+
+def check_intent_reach_violation(grid, rows, cols, moves, obstacles):
+	should_reach_obstacles = set()
+
+	for obs in obstacles:
+		if obs.intent == Intent.REACH:
+			should_reach_obstacles.add(obs.number + 1)
+
+	for move in moves:
+		if grid[move.x][move.y].is_obstacle:
+			obstacle_number = grid[move.x][move.y].obstacle_number
+
+			if obstacle_number + 1 in should_reach_obstacles:
+				should_reach_obstacles = should_reach_obstacles - set([obstacle_number])
+
+	should_reach_obstacles = list(should_reach_obstacles)
+
+	for i in range(len(should_reach_obstacles)):
+		obstacles[should_reach_obstacles[i] - 1].intent_violation = True
+	
+	return should_reach_obstacles
+	
+
 def fly(grid, rows, cols):
 
 	moves = []
@@ -247,9 +299,7 @@ def fly(grid, rows, cols):
 def plot_moves(moves):
 	plot_x = []
 	plot_y = []
-	print("Moves: ")
 	for move in moves:
-		print(str(move.x) + " " + str(move.y))
 
 		plot_x.append(move.x)
 		plot_y.append(move.y)
@@ -261,7 +311,6 @@ def plot_moves(moves):
 def plot_obstacles(obstacles):
 	count = 1
 	for obs in obstacles: 
-		print(str(obs.x) + " " + str(obs.y) + " " + str(obs.length) + " " + str(obs.width))
 		obs_x = []
 		obs_y = []
 		
@@ -281,6 +330,13 @@ def plot_obstacles(obstacles):
 		obs_y.append(obs.y)
 
 		plt.plot(obs_x, obs_y, linewidth=3.0, label='obs')
+
+		if obs.intent_violation == True:
+			plt.plot(obs.x, obs.y, 'rX')
+			plt.plot(obs.x + obs.length - 1, obs.y, 'rX')
+			plt.plot(obs.x + obs.length - 1, obs.y + obs.width - 1, 'rX')
+			plt.plot(obs.x, obs.y + obs.width - 1, 'rX')
+
 		count += 1
 	
 if __name__ == '__main__':
@@ -326,12 +382,21 @@ if __name__ == '__main__':
 
 		length, width, x, y, grid = generate_obstacle(grid, rows, cols, i)
 	
-		obstacles.append(Obstacle(x, y, length, width, intent_input))
+		obstacles.append(Obstacle(i, x, y, length, width, intent_input))
 
 
 	render_flying_area(grid, rows, cols)
 
 	moves = fly(grid, rows, cols)
+
+	avoidance_violated_intents = check_intent_avoidance_violation(grid, rows, cols, moves, obstacles)
+
+	print("Avoidance violated intents: ")
+	print(avoidance_violated_intents)
+
+	reach_violated_intents = check_intent_reach_violation(grid, rows, cols, moves, obstacles)
+	print("Reach violated intents: ")
+	print(reach_violated_intents)
 	
 	plot_moves(moves)
 	plot_obstacles(obstacles)
