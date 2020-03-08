@@ -4,6 +4,7 @@ from cell_entry import CellEntry
 from intent import Intent
 from obstacle import Obstacle
 from os import system, name 
+import matplotlib.pyplot as plt
 
 import random
 
@@ -21,9 +22,13 @@ def clear():
         _ = system('clear') 
 
 #The generated obstacle doesn't actually intersect with any of the previously created obstacles
-def is_valid_obstacle(grid, x, y, length, width):
+def is_valid_obstacle(grid, x, y, length, width, rows, cols):
 	for i in range(0, length):
+		if i + x >= rows:
+			return False
 		for j in range(0, width):
+			if j + y >= cols:
+				return False
 			if grid[i + x][j + y].cell_entry != CellEntry.EMPTY:
 				return False
 	return True
@@ -69,15 +74,13 @@ def generate_obstacle(grid, rows, cols, obstacle_number):
 	print("Obstacle length: " + str(obstacle_length))
 	print("Obstacle width: " + str(obstacle_width))
 
-
-	is_valid = is_valid_obstacle(grid, cell_x, cell_y, obstacle_length, obstacle_width)
+	is_valid = is_valid_obstacle(grid, cell_x, cell_y, obstacle_length, obstacle_width, rows, cols)
 
 	while not is_valid:
-		print("Not valid")
 		cell_x = random.randint(0, rows - 1)
 		cell_y = random.randint(0, cols - 1)
 
-		is_valid = is_valid_obstacle(grid, cell_x, cell_y, obstacle_length, obstacle_width)
+		is_valid = is_valid_obstacle(grid, cell_x, cell_y, obstacle_length, obstacle_width, rows, cols)
 
 	fill_grid_with_obstacle(grid, cell_x, cell_y, obstacle_length, obstacle_width, obstacle_number)
 
@@ -240,6 +243,45 @@ def fly(grid, rows, cols):
 	moves.append(Coordinate(current_pos.x, current_pos.y))
 
 	return moves
+
+def plot_moves(moves):
+	plot_x = []
+	plot_y = []
+	print("Moves: ")
+	for move in moves:
+		print(str(move.x) + " " + str(move.y))
+
+		plot_x.append(move.x)
+		plot_y.append(move.y)
+
+	plt.plot(plot_x, plot_y)
+	plt.plot(plot_x[0], plot_y[0], 'go')
+	plt.plot(plot_x[len(plot_x) - 1], plot_y[len(plot_y) - 1], 'ro')
+
+def plot_obstacles(obstacles):
+	count = 1
+	for obs in obstacles: 
+		print(str(obs.x) + " " + str(obs.y) + " " + str(obs.length) + " " + str(obs.width))
+		obs_x = []
+		obs_y = []
+		
+		obs_x.append(obs.x)
+		obs_y.append(obs.y)
+
+		obs_x.append(obs.x + obs.length - 1)
+		obs_y.append(obs.y)
+
+		obs_x.append(obs.x + obs.length - 1)
+		obs_y.append(obs.y + obs.width - 1)
+
+		obs_x.append(obs.x)
+		obs_y.append(obs.y + obs.width - 1)
+
+		obs_x.append(obs.x)
+		obs_y.append(obs.y)
+
+		plt.plot(obs_x, obs_y, linewidth=3.0, label='obs')
+		count += 1
 	
 if __name__ == '__main__':
 
@@ -291,10 +333,8 @@ if __name__ == '__main__':
 
 	moves = fly(grid, rows, cols)
 	
+	plot_moves(moves)
+	plot_obstacles(obstacles)
 
-	print("Moves: ")
-	for move in moves:
-		print(str(move.x) + " " + str(move.y))
-
-
+	plt.show()
 		
