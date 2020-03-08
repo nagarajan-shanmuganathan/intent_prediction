@@ -3,10 +3,13 @@ from coordinate import Coordinate
 from cell_entry import CellEntry
 from intent import Intent
 from obstacle import Obstacle
+from output_data import OutputData
+from obstacle_output import ObstacleOutput
 from os import system, name 
 import matplotlib.pyplot as plt
 
 import random
+import json
 
 MAX_OBSTACLES = 5
 DEFAULT_ORIENTATION_MIN_VALUE = 1
@@ -59,10 +62,6 @@ def generate_obstacle(grid, rows, cols, obstacle_number):
 	cell_x = random.randint(0, rows - 2)
 	cell_y = random.randint(0, cols - 2)
 
-	print("cell_x: " + str(cell_x))
-	print("cell_y: " + str(cell_y))
-	
-
 	#This is used to ensure that the obstacles don't cover the entire row or column
 	random_subtractor = random.randint(2,5)
 	
@@ -80,9 +79,6 @@ def generate_obstacle(grid, rows, cols, obstacle_number):
 
 	if obstacle_width > rows/2:
 		obstacle_width -= random_subtractor
-
-	print("Obstacle length: " + str(obstacle_length))
-	print("Obstacle width: " + str(obstacle_width))
 
 	is_valid = is_valid_obstacle(grid, cell_x, cell_y, obstacle_length, obstacle_width, rows, cols)
 
@@ -305,26 +301,38 @@ def plot_moves(moves):
 		plot_y.append(move.y)
 
 	plt.plot(plot_x, plot_y)
-	plt.plot(plot_x[0], plot_y[0], 'go')
-	plt.plot(plot_x[len(plot_x) - 1], plot_y[len(plot_y) - 1], 'ro')
+	plt.plot(plot_x[0], plot_y[0], 'go', ms=8)
+	plt.plot(plot_x[len(plot_x) - 1], plot_y[len(plot_y) - 1], 'bo', ms=8)
 
 def plot_obstacles(obstacles):
+
+	all_obstacles_points = []
 	count = 1
 	for obs in obstacles: 
+
+		obstacle_points = []
 		obs_x = []
 		obs_y = []
 		
 		obs_x.append(obs.x)
 		obs_y.append(obs.y)
 
+		obstacle_points.append(Coordinate(obs.x, obs.y))
+
 		obs_x.append(obs.x + obs.length - 1)
 		obs_y.append(obs.y)
 
+		obstacle_points.append(Coordinate(obs.x + obs.length - 1, obs.y))
+
 		obs_x.append(obs.x + obs.length - 1)
 		obs_y.append(obs.y + obs.width - 1)
 
+		obstacle_points.append(Coordinate(obs.x + obs.length - 1, obs.y + obs.width - 1))
+
 		obs_x.append(obs.x)
 		obs_y.append(obs.y + obs.width - 1)
+
+		obstacle_points.append(Coordinate(obs.x, obs.y + obs.width - 1))
 
 		obs_x.append(obs.x)
 		obs_y.append(obs.y)
@@ -332,12 +340,23 @@ def plot_obstacles(obstacles):
 		plt.plot(obs_x, obs_y, linewidth=3.0, label='obs')
 
 		if obs.intent_violation == True:
-			plt.plot(obs.x, obs.y, 'rX')
-			plt.plot(obs.x + obs.length - 1, obs.y, 'rX')
-			plt.plot(obs.x + obs.length - 1, obs.y + obs.width - 1, 'rX')
-			plt.plot(obs.x, obs.y + obs.width - 1, 'rX')
+			plt.plot(obs.x, obs.y, 'rX', ms=8)
+			plt.plot(obs.x + obs.length - 1, obs.y, 'rX', ms=8)
+			plt.plot(obs.x + obs.length - 1, obs.y + obs.width - 1, 'rX', ms=8)
+			plt.plot(obs.x, obs.y + obs.width - 1, 'rX', ms=8)
 
 		count += 1
+
+		all_obstacles_points.append(obstacle_points)
+
+	return all_obstacles_points
+
+
+def convert_to_dict(obj):
+  obj_dict = {}
+  obj_dict.update(obj.__dict__)
+  
+  return obj_dict
 	
 if __name__ == '__main__':
 
@@ -399,7 +418,28 @@ if __name__ == '__main__':
 	print(reach_violated_intents)
 	
 	plot_moves(moves)
-	plot_obstacles(obstacles)
+	all_obstacles_points = plot_obstacles(obstacles)
+
+	# Generating output data
+
+	start_pos = Coordinate(rows - 1, 0)
+	goal_pos = Coordinate(0, cols - 1)
+
+	obstacles_output = []
+	for i in range(len(all_obstacles_points)):
+		name = 'obstactle'+str(i+1)
+		intent = obstacles[i].intent.name
+		coordinates = all_obstacles_points[i]
+		intent_violation = obstacles[i].intent_violation
+
+		obstacles_output.append(ObstacleOutput(name, intent, coordinates, intent_violation))
+
+
+	output_data = OutputData(rows, cols, start_pos, goal_pos, obstacles_output, moves)
+	json_data = json.dumps(output_data, default=convert_to_dict, indent=4)
+
+	with open('output_data.txt', 'w') as outfile:
+		json.dump(output_data, outfile, default=convert_to_dict, indent=4)
 
 	plt.show()
 		
